@@ -199,9 +199,21 @@ export function NewsScreen() {
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: insets.bottom + 80 },
+          filtered.length === 0 && styles.listEmpty,
         ]}
         ItemSeparatorComponent={() => <View style={{ height: Spacing.sm }} />}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <FText variant="h2" color={Colors.text.tertiary}>—</FText>
+            <FText variant="bodyMedium" color={Colors.text.tertiary} style={{ marginTop: Spacing.sm }}>
+              해당 카테고리의 뉴스가 없습니다
+            </FText>
+            <FText variant="bodySmall" color={Colors.text.tertiary} style={{ marginTop: 4 }}>
+              다른 필터를 선택해보세요
+            </FText>
+          </View>
+        }
       />
     </View>
   );
@@ -250,6 +262,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.border.subtle,
   },
   listContent: { padding: Spacing.base },
+  listEmpty: { flex: 1 },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
   newsCard: { gap: Spacing.xs },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   tagPill: {
