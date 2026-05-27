@@ -79,3 +79,11 @@ package-lock.json
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+node_modules/
+ios/Pods/
+Pods/
+.DS_Store
+build/
+DerivedData/
+.expo/
