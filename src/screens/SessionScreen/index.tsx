@@ -10,6 +10,7 @@ import {
   AppState,
   AppStateStatus,
 } from 'react-native';
+import { saveSession } from '../../services/sessionService';
 import {
   sendMessage,
   updateApplicationContext,
@@ -365,10 +366,27 @@ function ActiveSession() {
   const sessionStateRef = useRef(state.sessionState);
   const [showWarning, setShowWarning] = useState(false);
   const warningAnim = useRef(new Animated.Value(0)).current;
+  const hasSavedRef = useRef(false);
 
   // Keep ref in sync so AppState listener always has current value
   useEffect(() => {
     sessionStateRef.current = state.sessionState;
+  }, [state.sessionState]);
+
+  // Save session to Supabase when result is determined
+  useEffect(() => {
+    const isResult = state.sessionState === 'success' || state.sessionState === 'failure';
+    if (!isResult || hasSavedRef.current) return;
+    hasSavedRef.current = true;
+
+    const fc = calcFC(state.sessionDuration, state.sessionDistractions);
+    saveSession({
+      duration_seconds: state.sessionElapsed,
+      result: state.sessionState,
+      distractions: state.sessionDistractions,
+      fc_earned: state.sessionState === 'success' ? fc.final : -state.sessionFocusInvested,
+      focus_invested: state.sessionFocusInvested,
+    });
   }, [state.sessionState]);
 
   // Timer tick

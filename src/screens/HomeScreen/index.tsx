@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -7,6 +7,7 @@ import {
   Animated,
   Dimensions,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { TourOverlay, TourStep, TourRect } from '../../components/TourOverlay';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +17,7 @@ import { Card } from '../../components/common/Card';
 import { Divider } from '../../components/common/Divider';
 import { SparkLine } from '../../components/charts/SparkLine';
 import { useFocus } from '../../store/focusStore';
+import { fetchRecentSessions, SessionHistory } from '../../services/sessionService';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CHART_W = SCREEN_W - Spacing.base * 2;
@@ -94,6 +96,103 @@ function MetricCard({ label, value, unit = '%', delta, color, glow, sublabel }: 
         </FText>
       )}
     </Card>
+  );
+}
+
+// ─── Recent Sessions ──────────────────────────────────────────────────────────
+function RecentSessions() {
+  const [sessions, setSessions] = useState<SessionHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const result = await fetchRecentSessions(3);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSessions(result.data);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return m > 0 ? `${m}분 ${s}초` : `${s}초`;
+  };
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <View>
+      <View style={styles.newsHeader}>
+        <FText variant="label" color={Colors.text.tertiary}>최근 세션 기록</FText>
+        {!loading && (
+          <TouchableOpacity onPress={load} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <FText variant="label" color={Colors.accent.dim}>새로고침</FText>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {loading && (
+        <Card padding={Spacing.lg} style={styles.sessionStateCard}>
+          <ActivityIndicator size="small" color={Colors.accent.primary} />
+          <FText variant="numXs" color={Colors.text.tertiary} style={{ marginTop: Spacing.sm }}>
+            불러오는 중...
+          </FText>
+        </Card>
+      )}
+
+      {!loading && error && (
+        <Card padding={Spacing.md} style={styles.sessionStateCard}>
+          <FText variant="numXs" color={Colors.market.bearish}>연결 오류 — {error}</FText>
+          <TouchableOpacity onPress={load} style={styles.retryBtn}>
+            <FText variant="numXs" color={Colors.accent.primary}>다시 시도</FText>
+          </TouchableOpacity>
+        </Card>
+      )}
+
+      {!loading && !error && sessions.length === 0 && (
+        <Card padding={Spacing.lg} style={styles.sessionStateCard}>
+          <FText variant="numXs" color={Colors.text.tertiary}>아직 세션 기록이 없어요</FText>
+          <FText variant="numXs" color={Colors.text.muted} style={{ marginTop: 4 }}>
+            첫 세션을 완료하면 여기에 표시돼요
+          </FText>
+        </Card>
+      )}
+
+      {!loading && !error && sessions.map((s) => {
+        const isSuccess = s.result === 'success';
+        const resultColor = isSuccess ? Colors.market.bullish : Colors.market.bearish;
+        return (
+          <Card key={s.id} style={styles.newsCard} padding={Spacing.md}>
+            <View style={styles.newsRow}>
+              <View style={[styles.sessionResultBadge, { borderColor: resultColor + '40', backgroundColor: resultColor + '10' }]}>
+                <FText variant="numXs" color={resultColor}>
+                  {isSuccess ? '완료' : '중단'}
+                </FText>
+              </View>
+              <FText variant="numXs" color={Colors.text.tertiary}>{formatDate(s.created_at)}</FText>
+            </View>
+            <View style={[styles.newsRow, { marginTop: Spacing.sm }]}>
+              <FText variant="numXs" color={Colors.text.secondary}>
+                {formatDuration(s.duration_seconds)} · 이탈 {s.distractions}회
+              </FText>
+              <FText variant="numSm" color={resultColor}>
+                {s.fc_earned >= 0 ? '+' : ''}{s.fc_earned} FC
+              </FText>
+            </View>
+          </Card>
+        );
+      })}
+    </View>
   );
 }
 
@@ -337,6 +436,9 @@ export function HomeScreen({ navigation }: any) {
           />
         </View>
 
+        {/* ── Recent Sessions ── */}
+        <RecentSessions />
+
         {/* ── Recent News ── */}
         <View ref={newsRef} collapsable={false}>
         <View style={styles.newsHeader}>
@@ -517,4 +619,19 @@ const styles = StyleSheet.create({
   newsCard: { marginBottom: 2 },
   newsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   newsTag: {},
+  sessionStateCard: { alignItems: 'center', marginBottom: 2 },
+  sessionResultBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+  },
+  retryBtn: {
+    marginTop: Spacing.sm,
+    paddingVertical: 4,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.accent.primary + '40',
+  },
 });
