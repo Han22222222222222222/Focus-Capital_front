@@ -9,6 +9,9 @@ import {
   ScrollView,
   AppState,
   AppStateStatus,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { saveSession } from '../../services/sessionService';
 import {
@@ -22,9 +25,65 @@ import { Colors, Spacing, Radius, Typography } from '../../theme';
 import { FText } from '../../components/common/FText';
 import { Card } from '../../components/common/Card';
 import { Divider } from '../../components/common/Divider';
-import { useFocus } from '../../store/focusStore';
+import { useFocus, NewsItem } from '../../store/focusStore';
 
 const { width: W } = Dimensions.get('window');
+
+// ─── News generator ───────────────────────────────────────────────────────────
+function buildNewsItem(
+  result: 'success' | 'failure',
+  durationSeconds: number,
+  distractions: number,
+  fcEarned: number,
+): NewsItem {
+  const now = new Date();
+  const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  const minutes = Math.floor(durationSeconds / 60);
+  const id = `session-${now.getTime()}`;
+
+  if (result === 'success') {
+    if (distractions === 0) {
+      return {
+        id, time, type: 'positive', tag: 'FOCUS',
+        headline: `Focus Index 상승 — ${minutes}분 무이탈 세션 완료`,
+        detail: `이탈 없이 완료. 무이탈 보너스 포함 +${fcEarned} FC 수익 확정.`,
+      };
+    }
+    if (distractions <= 2) {
+      return {
+        id, time, type: 'positive', tag: 'FOCUS',
+        headline: `${minutes}분 세션 완료 — 이탈 ${distractions}회 기록`,
+        detail: `세션 성공. 이탈 페널티 -${distractions * 3} FC 적용 후 +${fcEarned} FC 확정.`,
+      };
+    }
+    return {
+      id, time, type: 'warning', tag: 'VOLATILITY',
+      headline: `세션 완료 — 이탈 ${distractions}회로 변동성 상승`,
+      detail: `완료했지만 잦은 이탈로 집중 흐름 손상. +${fcEarned} FC, 변동성 주의.`,
+    };
+  }
+
+  // failure
+  if (distractions >= 3) {
+    return {
+      id, time, type: 'negative', tag: 'DOPAMINE',
+      headline: `세션 중단 — 앱 이탈 ${distractions}회 후 포기`,
+      detail: `${minutes > 0 ? `${minutes}분 경과 후` : '시작 직후'} 중단. 도파민 과열 상태 가능성. -${Math.abs(fcEarned)} FC 손실.`,
+    };
+  }
+  if (minutes < 5) {
+    return {
+      id, time, type: 'negative', tag: 'FOCUS',
+      headline: `조기 중단 — ${minutes > 0 ? `${minutes}분` : '1분 미만'} 만에 포기`,
+      detail: `세션 시작 직후 중단. -${Math.abs(fcEarned)} FC 손실. 짧은 세션부터 재도전 권장.`,
+    };
+  }
+  return {
+    id, time, type: 'negative', tag: 'FOCUS',
+    headline: `${minutes}분 투자 중단 — 손실 처리`,
+    detail: `세션 포기로 -${Math.abs(fcEarned)} FC 손실. 회복 후 재투자 권장.`,
+  };
+}
 const CIRCLE_SIZE = 220;
 
 // ─── Tracking consent modal ───────────────────────────────────────────────────
@@ -218,9 +277,25 @@ function RingTimer({
 function SessionSetup({ navigation }: any) {
   const { state, dispatch } = useFocus();
   const [showConsent, setShowConsent] = useState(!state.hasAcceptedTracking);
-  const selectedDuration = DURATION_OPTIONS.find(
-    (d) => d.seconds === state.sessionDuration
-  ) ?? DURATION_OPTIONS[1];
+  const [isCustom, setIsCustom] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState('');
+
+  const presetMatch = DURATION_OPTIONS.find(d => d.seconds === state.sessionDuration);
+  const selectedDuration = presetMatch ?? DURATION_OPTIONS[1];
+
+  const customSeconds = parseInt(customMinutes, 10) * 60;
+  const customInfo = calcBaseFC(customSeconds);
+  const isCustomValid = !isNaN(customSeconds) && customSeconds >= 60;
+
+  const summaryLabel = isCustom && isCustomValid
+    ? `${customMinutes}분`
+    : selectedDuration.label;
+  const summaryRet = isCustom && isCustomValid
+    ? `+${customInfo.fc} FC`
+    : selectedDuration.ret;
+  const summaryRisk = isCustom && isCustomValid
+    ? customInfo.risk
+    : selectedDuration.risk;
 
   return (
     <View style={{ flex: 1 }}>
@@ -243,11 +318,14 @@ function SessionSetup({ navigation }: any) {
       </FText>
       <View style={styles.durationGrid}>
         {DURATION_OPTIONS.map((opt) => {
-          const selected = opt.seconds === state.sessionDuration;
+          const selected = !isCustom && opt.seconds === state.sessionDuration;
           return (
             <TouchableOpacity
               key={opt.seconds}
-              onPress={() => dispatch({ type: 'SET_SESSION_DURATION', payload: opt.seconds })}
+              onPress={() => {
+                setIsCustom(false);
+                dispatch({ type: 'SET_SESSION_DURATION', payload: opt.seconds });
+              }}
               activeOpacity={0.7}
             >
               <Card
@@ -273,6 +351,57 @@ function SessionSetup({ navigation }: any) {
             </TouchableOpacity>
           );
         })}
+
+        {/* 직접 설정 카드 */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setIsCustom(true)}
+          style={styles.customCard}
+        >
+          <Card
+            variant={isCustom ? 'accent' : 'default'}
+            padding={Spacing.md}
+            style={[styles.customCardInner, isCustom && styles.durationSelected]}
+          >
+            {isCustom ? (
+              <View style={styles.customInputRow}>
+                <TextInput
+                  style={styles.customInput}
+                  value={customMinutes}
+                  onChangeText={(t) => {
+                    const digits = t.replace(/[^0-9]/g, '');
+                    setCustomMinutes(digits);
+                    const mins = parseInt(digits, 10);
+                    if (!isNaN(mins) && mins >= 1) {
+                      dispatch({ type: 'SET_SESSION_DURATION', payload: mins * 60 });
+                    }
+                  }}
+                  keyboardType="number-pad"
+                  placeholder="분"
+                  placeholderTextColor={Colors.text.muted}
+                  autoFocus
+                  maxLength={3}
+                />
+                <FText variant="numSm" color={Colors.accent.primary}>분</FText>
+              </View>
+            ) : (
+              <FText variant="h3" color={Colors.text.secondary}>직접 설정</FText>
+            )}
+            {isCustom && isCustomValid && (
+              <View style={styles.durationMeta}>
+                <FText variant="numXs" color={Colors.text.tertiary}>리스크</FText>
+                <FText variant="numXs" color={
+                  customInfo.risk === '낮음' ? Colors.market.bullish
+                    : customInfo.risk === '높음' || customInfo.risk === '매우 높음' ? Colors.market.bearish
+                    : Colors.volatility
+                }>{customInfo.risk}</FText>
+              </View>
+            )}
+            {isCustom && isCustomValid && (
+              <FText variant="numSm" color={Colors.accent.primary}>+{customInfo.fc} FC</FText>
+            )}
+          </Card>
+        </TouchableOpacity>
       </View>
 
       {/* Focus amount */}
@@ -305,7 +434,7 @@ function SessionSetup({ navigation }: any) {
       <Card variant="elevated" padding={Spacing.base} style={styles.summaryCard}>
         <View style={styles.summaryRow}>
           <FText variant="bodySmall" color={Colors.text.tertiary}>투자 시간</FText>
-          <FText variant="numSm" color={Colors.text.primary}>{selectedDuration.label}</FText>
+          <FText variant="numSm" color={Colors.text.primary}>{summaryLabel}</FText>
         </View>
         <View style={styles.summaryRow}>
           <FText variant="bodySmall" color={Colors.text.tertiary}>투자 Focus</FText>
@@ -313,19 +442,20 @@ function SessionSetup({ navigation }: any) {
         </View>
         <View style={styles.summaryRow}>
           <FText variant="bodySmall" color={Colors.text.tertiary}>예상 수익</FText>
-          <FText variant="numSm" color={Colors.market.bullish}>{selectedDuration.ret}</FText>
+          <FText variant="numSm" color={Colors.market.bullish}>{summaryRet}</FText>
         </View>
         <View style={styles.summaryRow}>
           <FText variant="bodySmall" color={Colors.text.tertiary}>리스크</FText>
-          <FText variant="numSm" color={Colors.volatility}>{selectedDuration.risk}</FText>
+          <FText variant="numSm" color={Colors.volatility}>{summaryRisk}</FText>
         </View>
       </Card>
 
       {/* Start */}
       <TouchableOpacity
-        style={styles.startButton}
+        style={[styles.startButton, isCustom && !isCustomValid && styles.startButtonDisabled]}
         activeOpacity={0.85}
         onPress={() => {
+          if (isCustom && !isCustomValid) return;
           if (!state.hasAcceptedTracking) {
             setShowConsent(true);
           } else {
@@ -333,7 +463,9 @@ function SessionSetup({ navigation }: any) {
           }
         }}
       >
-        <FText variant="bodyMedium" color={Colors.bg.primary}>투자 시작</FText>
+        <FText variant="bodyMedium" color={Colors.bg.primary}>
+          {isCustom && !isCustomValid ? '시간을 입력하세요' : '투자 시작'}
+        </FText>
       </TouchableOpacity>
     </ScrollView>
 
@@ -350,10 +482,20 @@ function SessionSetup({ navigation }: any) {
   );
 }
 
-// ─── FC calculator ────────────────────────────────────────────────────────────
+// ─── FC / Risk calculator ─────────────────────────────────────────────────────
+function calcBaseFC(seconds: number): { fc: number; risk: string } {
+  const minutes = seconds / 60;
+  if (minutes < 20) return { fc: Math.max(1, Math.round(minutes * 0.8)), risk: '낮음' };
+  if (minutes < 35) return { fc: Math.round(minutes * 0.88), risk: '보통' };
+  if (minutes < 70) return { fc: Math.round(minutes * 1.0), risk: '높음' };
+  return { fc: Math.round(minutes * 1.11), risk: '매우 높음' };
+}
+
 function calcFC(durationSeconds: number, distractions: number): { base: number; penalty: number; bonus: number; final: number } {
-  const raw = DURATION_OPTIONS.find(d => d.seconds === durationSeconds)?.ret ?? '+22 FC';
-  const base = parseInt(raw.replace(/[^0-9]/g, ''), 10);
+  const preset = DURATION_OPTIONS.find(d => d.seconds === durationSeconds);
+  const base = preset
+    ? parseInt(preset.ret.replace(/[^0-9]/g, ''), 10)
+    : calcBaseFC(durationSeconds).fc;
   const penalty = distractions * 3;
   const bonus = distractions === 0 ? 5 : 0;
   const final = Math.max(1, base - penalty + bonus);
@@ -373,19 +515,31 @@ function ActiveSession() {
     sessionStateRef.current = state.sessionState;
   }, [state.sessionState]);
 
-  // Save session to Supabase when result is determined
+  // Save session to Supabase + generate news when result is determined
   useEffect(() => {
     const isResult = state.sessionState === 'success' || state.sessionState === 'failure';
     if (!isResult || hasSavedRef.current) return;
     hasSavedRef.current = true;
 
     const fc = calcFC(state.sessionDuration, state.sessionDistractions);
+    const fcEarned = state.sessionState === 'success' ? fc.final : -state.sessionFocusInvested;
+
     saveSession({
       duration_seconds: state.sessionElapsed,
       result: state.sessionState,
       distractions: state.sessionDistractions,
-      fc_earned: state.sessionState === 'success' ? fc.final : -state.sessionFocusInvested,
+      fc_earned: fcEarned,
       focus_invested: state.sessionFocusInvested,
+    });
+
+    dispatch({
+      type: 'ADD_NEWS',
+      payload: buildNewsItem(
+        state.sessionState,
+        state.sessionElapsed,
+        state.sessionDistractions,
+        fcEarned,
+      ),
     });
   }, [state.sessionState]);
 
@@ -624,6 +778,17 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   durationSelected: {},
+  customCard: { width: '100%' },
+  customCardInner: { gap: 4 },
+  customInputRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  customInput: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.accent.primary,
+    minWidth: 60,
+    padding: 0,
+  },
+  startButtonDisabled: { backgroundColor: Colors.bg.elevated },
   durationMeta: { flexDirection: 'row', gap: 4, alignItems: 'center', marginTop: 2 },
   focusRow: { flexDirection: 'row', gap: Spacing.sm },
   focusChip: {

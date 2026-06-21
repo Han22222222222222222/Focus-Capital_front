@@ -154,7 +154,8 @@ type Action =
   | { type: 'END_SESSION'; payload: 'success' | 'failure' }
   | { type: 'RESET_SESSION' }
   | { type: 'ADD_DISTRACTION' }
-  | { type: 'TICK_CHART' };
+  | { type: 'TICK_CHART' }
+  | { type: 'ADD_NEWS'; payload: NewsItem };
 
 function reducer(state: FocusState, action: Action): FocusState {
   switch (action.type) {
@@ -195,6 +196,11 @@ function reducer(state: FocusState, action: Action): FocusState {
         chartData: [...state.chartData.slice(1), next],
       };
     }
+    case 'ADD_NEWS':
+      return {
+        ...state,
+        news: [action.payload, ...state.news].slice(0, 20),
+      };
     default:
       return state;
   }
