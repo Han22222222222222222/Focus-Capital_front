@@ -7,6 +7,7 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing, Radius } from '../../theme';
 import { FText } from '../common/FText';
 
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export function TourOverlay({ steps, currentStep, onNext, onSkip }: Props) {
+  const { top: safeTop } = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const visible = currentStep >= 0 && currentStep < steps.length;
@@ -67,7 +69,7 @@ export function TourOverlay({ steps, currentStep, onNext, onSkip }: Props) {
   // Put tooltip above spotlight if it's in the lower half of the screen
   const tooltipAbove = spotBottom > SH * 0.5;
   const tooltipTop = tooltipAbove
-    ? Math.max(8, sy - 196)
+    ? Math.max(safeTop + 8, sy - 196)
     : spotBottom + 14;
 
   const isLast = currentStep === steps.length - 1;
