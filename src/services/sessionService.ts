@@ -52,3 +52,26 @@ export async function fetchRecentSessions(limit = 10): Promise<{
     return { data: [], error: message };
   }
 }
+
+export async function fetchWeeklyAnalytics(): Promise<{
+  data: SessionHistory[];
+  error?: string;
+}> {
+  const since = new Date();
+  since.setDate(since.getDate() - 6);
+  since.setHours(0, 0, 0, 0);
+
+  try {
+    const { data, error } = await supabase
+      .from('session_records')
+      .select('*')
+      .gte('created_at', since.toISOString())
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return { data: data ?? [] };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '알 수 없는 오류';
+    return { data: [], error: message };
+  }
+}

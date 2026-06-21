@@ -521,12 +521,13 @@ function ActiveSession() {
     if (!isResult || hasSavedRef.current) return;
     hasSavedRef.current = true;
 
+    const result = state.sessionState as 'success' | 'failure';
     const fc = calcFC(state.sessionDuration, state.sessionDistractions);
-    const fcEarned = state.sessionState === 'success' ? fc.final : -state.sessionFocusInvested;
+    const fcEarned = result === 'success' ? fc.final : -state.sessionFocusInvested;
 
     saveSession({
       duration_seconds: state.sessionElapsed,
-      result: state.sessionState,
+      result,
       distractions: state.sessionDistractions,
       fc_earned: fcEarned,
       focus_invested: state.sessionFocusInvested,
@@ -535,7 +536,7 @@ function ActiveSession() {
     dispatch({
       type: 'ADD_NEWS',
       payload: buildNewsItem(
-        state.sessionState,
+        result,
         state.sessionElapsed,
         state.sessionDistractions,
         fcEarned,
