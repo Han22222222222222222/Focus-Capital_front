@@ -13,6 +13,7 @@ import { Colors, Spacing, Radius } from '../../theme';
 import { FText } from '../../components/common/FText';
 import { Card } from '../../components/common/Card';
 import { Divider } from '../../components/common/Divider';
+import { useFocus } from '../../store/focusStore';
 
 const { width: W } = Dimensions.get('window');
 
@@ -195,6 +196,7 @@ function TermCard({ item, index }: { item: typeof TERMS[0]; index: number }) {
 export function GlossaryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const { dispatch } = useFocus();
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
@@ -264,6 +266,18 @@ export function GlossaryScreen({ navigation }: any) {
           ))}
         </View>
 
+        {/* Tour restart */}
+        <TouchableOpacity
+          style={styles.tourBtn}
+          activeOpacity={0.7}
+          onPress={() => {
+            dispatch({ type: 'RESET_TOUR' });
+            navigation.goBack();
+          }}
+        >
+          <FText variant="label" color={Colors.accent.primary}>◈  앱 사용법 다시 보기</FText>
+        </TouchableOpacity>
+
         {/* Footer note */}
         <View style={styles.footer}>
           <FText variant="numXs" color={Colors.text.muted} style={{ textAlign: 'center', lineHeight: 18 }}>
@@ -330,6 +344,15 @@ const styles = StyleSheet.create({
   tipRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  tourBtn: {
+    alignItems: 'center',
+    paddingVertical: Spacing.base,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.accent.primary + '40',
+    backgroundColor: Colors.accent.primary + '0A',
+    marginTop: Spacing.sm,
   },
   footer: {
     marginTop: Spacing.xl,

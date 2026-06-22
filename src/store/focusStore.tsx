@@ -144,6 +144,7 @@ const initialState: FocusState = {
 type Action =
   | { type: 'COMPLETE_ONBOARDING' }
   | { type: 'COMPLETE_TOUR' }
+  | { type: 'RESET_TOUR' }
   | { type: 'ACCEPT_TRACKING' }
   | { type: 'SET_SESSION_DURATION'; payload: number }
   | { type: 'SET_SESSION_FOCUS'; payload: number }
@@ -163,6 +164,8 @@ function reducer(state: FocusState, action: Action): FocusState {
       return { ...state, hasSeenOnboarding: true };
     case 'COMPLETE_TOUR':
       return { ...state, hasSeenTour: true };
+    case 'RESET_TOUR':
+      return { ...state, hasSeenTour: false };
     case 'ACCEPT_TRACKING':
       return { ...state, hasAcceptedTracking: true };
     case 'SET_SESSION_DURATION':
