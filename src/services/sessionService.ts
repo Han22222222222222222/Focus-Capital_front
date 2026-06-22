@@ -75,6 +75,32 @@ export async function fetchTodaySessions(): Promise<{
   }
 }
 
+export async function fetchTotalFC(): Promise<{
+  total: number;
+  todayDelta: number;
+  error?: string;
+}> {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  try {
+    const { data, error } = await supabase
+      .from('session_records')
+      .select('fc_earned, created_at');
+
+    if (error) throw error;
+    const rows = data ?? [];
+    const total = rows.reduce((sum, r) => sum + (r.fc_earned ?? 0), 0);
+    const todayDelta = rows
+      .filter(r => new Date(r.created_at) >= todayStart)
+      .reduce((sum, r) => sum + (r.fc_earned ?? 0), 0);
+    return { total, todayDelta };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '알 수 없는 오류';
+    return { total: 0, todayDelta: 0, error: message };
+  }
+}
+
 export async function fetchWeeklyAnalytics(): Promise<{
   data: SessionHistory[];
   error?: string;

@@ -17,7 +17,7 @@ import { Card } from '../../components/common/Card';
 import { Divider } from '../../components/common/Divider';
 import { SparkLine } from '../../components/charts/SparkLine';
 import { useFocus } from '../../store/focusStore';
-import { fetchRecentSessions, fetchTodaySessions, SessionHistory } from '../../services/sessionService';
+import { fetchRecentSessions, fetchTodaySessions, fetchTotalFC, SessionHistory } from '../../services/sessionService';
 import { inferFocusReadiness } from '../../utils/focusInference';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -198,6 +198,65 @@ function RecentSessions() {
   );
 }
 
+// ─── Account Balance Card ─────────────────────────────────────────────────────
+function AccountCard() {
+  const [total, setTotal] = useState<number | null>(null);
+  const [todayDelta, setTodayDelta] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const result = await fetchTotalFC();
+    if (!result.error) {
+      setTotal(result.total);
+      setTodayDelta(result.todayDelta);
+    }
+    setLoading(false);
+  }, []);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const deltaColor = todayDelta >= 0 ? Colors.market.bullish : Colors.market.bearish;
+  const deltaSign = todayDelta >= 0 ? '+' : '';
+
+  return (
+    <Card variant="elevated" padding={Spacing.md} style={styles.accountCard}>
+      <View style={styles.accountRow}>
+        <View>
+          <FText variant="label" color={Colors.text.tertiary}>MY ACCOUNT</FText>
+          {loading ? (
+            <ActivityIndicator size="small" color={Colors.accent.primary} style={{ marginTop: 6 }} />
+          ) : (
+            <View style={styles.accountBalanceRow}>
+              <FText variant="numLg" color={Colors.text.primary}>
+                {total !== null ? total.toLocaleString() : '—'}
+              </FText>
+              <FText variant="numSm" color={Colors.text.tertiary} style={{ marginLeft: 4, marginBottom: 2 }}>
+                FC
+              </FText>
+            </View>
+          )}
+        </View>
+        {!loading && total !== null && (
+          <View style={[styles.accountDeltaBadge, { borderColor: deltaColor + '40', backgroundColor: deltaColor + '12' }]}>
+            <FText variant="numXs" color={deltaColor}>
+              오늘  {deltaSign}{todayDelta} FC
+            </FText>
+          </View>
+        )}
+      </View>
+      {!loading && total !== null && (
+        <View style={styles.accountDivider} />
+      )}
+      {!loading && total !== null && (
+        <FText variant="numXs" color={Colors.text.muted}>
+          누적 집중 자산 · 전체 기간
+        </FText>
+      )}
+    </Card>
+  );
+}
+
 // ─── Readiness Card ───────────────────────────────────────────────────────────
 function ReadinessCard() {
   const [readiness, setReadiness] = useState(inferFocusReadiness([]));
@@ -369,6 +428,9 @@ export function HomeScreen({ navigation }: any) {
             <StatusBadge status={state.marketStatus} />
           </View>
         </Animated.View>
+
+        {/* ── Account Balance ── */}
+        <AccountCard />
 
         {/* ── Focus Index Hero ── */}
         <Animated.View
@@ -696,6 +758,28 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.accent.primary + '40',
+  },
+  accountCard: {},
+  accountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  accountBalanceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginTop: 4,
+  },
+  accountDeltaBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+  },
+  accountDivider: {
+    height: 1,
+    backgroundColor: Colors.border.subtle,
+    marginVertical: Spacing.sm,
   },
   readinessCard: { gap: Spacing.xs },
   readinessHeader: {
