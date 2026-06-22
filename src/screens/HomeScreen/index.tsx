@@ -17,7 +17,9 @@ import { Card } from '../../components/common/Card';
 import { Divider } from '../../components/common/Divider';
 import { SparkLine } from '../../components/charts/SparkLine';
 import { useFocus } from '../../store/focusStore';
-import { fetchRecentSessions, SessionHistory } from '../../services/sessionService';
+import { fetchRecentSessions, fetchTodaySessions, SessionHistory } from '../../services/sessionService';
+import { inferFocusReadiness } from '../../utils/focusInference';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CHART_W = SCREEN_W - Spacing.base * 2;
@@ -193,6 +195,64 @@ function RecentSessions() {
         );
       })}
     </View>
+  );
+}
+
+// ─── Readiness Card ───────────────────────────────────────────────────────────
+function ReadinessCard() {
+  const [readiness, setReadiness] = useState(inferFocusReadiness([]));
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const result = await fetchTodaySessions();
+    setReadiness(inferFocusReadiness(result.data));
+    setLoading(false);
+  }, []);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const levelColor =
+    readiness.level === 'high' ? Colors.market.bullish
+    : readiness.level === 'medium' ? Colors.volatility
+    : readiness.level === 'low' ? Colors.market.bearish
+    : Colors.text.tertiary;
+
+  return (
+    <Card variant="elevated" padding={Spacing.md} style={styles.readinessCard}>
+      <View style={styles.readinessHeader}>
+        <FText variant="label" color={Colors.text.tertiary}>집중 준비도</FText>
+        {loading
+          ? <ActivityIndicator size="small" color={Colors.accent.primary} />
+          : (
+            <View style={[styles.readinessBadge, { borderColor: levelColor + '50', backgroundColor: levelColor + '15' }]}>
+              <FText variant="numXs" color={levelColor}>{readiness.label}</FText>
+            </View>
+          )
+        }
+      </View>
+
+      {!loading && (
+        <>
+          {/* Score bar */}
+          <View style={styles.readinessBarBg}>
+            <View style={[styles.readinessBarFill, { width: `${readiness.score}%` as any, backgroundColor: levelColor }]} />
+          </View>
+
+          {/* Reasons */}
+          <View style={styles.reasonList}>
+            {readiness.reasons.slice(0, 2).map((r, i) => (
+              <FText key={i} variant="numXs" color={Colors.text.tertiary}>· {r}</FText>
+            ))}
+          </View>
+
+          {/* Recommendation */}
+          <FText variant="bodySmall" color={levelColor} style={{ marginTop: Spacing.xs }}>
+            {readiness.recommendation}
+          </FText>
+        </>
+      )}
+    </Card>
   );
 }
 
@@ -398,6 +458,9 @@ export function HomeScreen({ navigation }: any) {
           </View>
         </TouchableOpacity>
         </View>
+
+        {/* ── Readiness Card ── */}
+        <ReadinessCard />
 
         {/* ── 4 Metric Cards ── */}
         <FText variant="label" color={Colors.text.tertiary} style={styles.sectionLabel}>
@@ -634,4 +697,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.accent.primary + '40',
   },
+  readinessCard: { gap: Spacing.xs },
+  readinessHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  readinessBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+  },
+  readinessBarBg: {
+    height: 3,
+    backgroundColor: Colors.border.subtle,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: Spacing.xs,
+  },
+  readinessBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  reasonList: { gap: 2, marginTop: Spacing.xs },
 });
