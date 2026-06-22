@@ -325,6 +325,7 @@ function SessionSetup({ navigation }: any) {
 
   return (
     <View style={{ flex: 1 }}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={styles.setupContent}
@@ -494,6 +495,7 @@ function SessionSetup({ navigation }: any) {
         </FText>
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
 
     {showConsent && (
       <TrackingConsentModal
@@ -571,7 +573,7 @@ function ActiveSession() {
     };
     try { updateApplicationContext(ctx); } catch (_) {}
     getReachability().then((isReachable) => {
-      if (isReachable) sendMessage(ctx);
+      if (isReachable) sendMessage(ctx).catch(() => {});
     }).catch(() => {});
   }, [state.sessionState, state.sessionDistractions]);
 
@@ -777,6 +779,7 @@ export function SessionScreen({ navigation }: any) {
                       style: 'destructive',
                       onPress: () => {
                         dispatch({ type: 'END_SESSION', payload: 'failure' });
+                        dispatch({ type: 'RESET_SESSION' });
                         navigation.goBack();
                       },
                     },

@@ -458,6 +458,8 @@ export function HomeScreen({ navigation }: any) {
             <TouchableOpacity
               onPress={() => navigation.navigate('Glossary' as never)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel="용어 사전 열기"
+              accessibilityRole="button"
             >
               <View style={styles.helpBtn}>
                 <FText variant="numXs" color={Colors.text.tertiary}>?</FText>

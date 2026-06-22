@@ -261,7 +261,7 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
         if (flags.hasSeenTour) dispatch({ type: 'COMPLETE_TOUR' });
         if (flags.hasAcceptedTracking) dispatch({ type: 'ACCEPT_TRACKING' });
       } catch {}
-    });
+    }).catch(() => {});
   }, []);
 
   // Persist flags whenever they change
