@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { TourOverlay, TourStep, TourRect } from '../../components/TourOverlay';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Spacing, Radius, Typography } from '../../theme';
+import { Colors, Spacing, Radius } from '../../theme';
 import { FText } from '../../components/common/FText';
 import { Card } from '../../components/common/Card';
 import { Divider } from '../../components/common/Divider';
@@ -124,7 +124,7 @@ function RecentSessions() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const formatDuration = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -208,12 +208,18 @@ function AccountCard() {
   const [total, setTotal] = useState(0);
   const [todayDelta, setTodayDelta] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     const result = await fetchTotalFC();
-    setTotal(result.total);
-    setTodayDelta(result.todayDelta);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setTotal(result.total);
+      setTodayDelta(result.todayDelta);
+    }
     setLoading(false);
   }, []);
 
@@ -229,6 +235,13 @@ function AccountCard() {
           <FText variant="label" color={Colors.text.tertiary}>MY ACCOUNT</FText>
           {loading ? (
             <ActivityIndicator size="small" color={Colors.accent.primary} style={{ marginTop: 6 }} />
+          ) : error ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 4 }}>
+              <FText variant="numXs" color={Colors.market.bearish}>연결 오류</FText>
+              <TouchableOpacity onPress={load} style={styles.retryBtn}>
+                <FText variant="numXs" color={Colors.accent.primary}>다시 시도</FText>
+              </TouchableOpacity>
+            </View>
           ) : (
             <View style={styles.accountBalanceRow}>
               <FText variant="numLg" color={Colors.text.primary}>
@@ -240,7 +253,7 @@ function AccountCard() {
             </View>
           )}
         </View>
-        {!loading && (
+        {!loading && !error && (
           <View style={[styles.accountDeltaBadge, { borderColor: deltaColor + '40', backgroundColor: deltaColor + '12' }]}>
             <FText variant="numXs" color={deltaColor}>
               오늘  {deltaSign}{todayDelta} FC
@@ -248,10 +261,10 @@ function AccountCard() {
           </View>
         )}
       </View>
-      {!loading && (
+      {!loading && !error && (
         <View style={styles.accountDivider} />
       )}
-      {!loading && (
+      {!loading && !error && (
         <FText variant="numXs" color={Colors.text.muted}>
           누적 집중 자산 · 전체 기간
         </FText>
@@ -264,11 +277,17 @@ function AccountCard() {
 function ReadinessCard() {
   const [readiness, setReadiness] = useState(inferFocusReadiness([]));
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     const result = await fetchTodaySessions();
-    setReadiness(inferFocusReadiness(result.data));
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setReadiness(inferFocusReadiness(result.data));
+    }
     setLoading(false);
   }, []);
 
@@ -286,6 +305,8 @@ function ReadinessCard() {
         <FText variant="label" color={Colors.text.tertiary}>집중 준비도</FText>
         {loading
           ? <ActivityIndicator size="small" color={Colors.accent.primary} />
+          : error
+          ? <FText variant="numXs" color={Colors.market.bearish}>조회 실패</FText>
           : (
             <View style={[styles.readinessBadge, { borderColor: levelColor + '50', backgroundColor: levelColor + '15' }]}>
               <FText variant="numXs" color={levelColor}>{readiness.label}</FText>
@@ -294,7 +315,7 @@ function ReadinessCard() {
         }
       </View>
 
-      {!loading && (
+      {!loading && !error && (
         <>
           {/* Score bar */}
           <View style={styles.readinessBarBg}>

@@ -92,10 +92,6 @@ function NewsRow({ item, index }: { item: NewsItem; index: number }) {
           {item.detail}
         </FText>
 
-        {/* Bottom indicator */}
-        <View style={[styles.bottomBar, { backgroundColor: typeColor + '40' }]}>
-          <View style={[styles.bottomBarFill, { backgroundColor: typeColor, width: `${item.type === 'positive' ? 82 : item.type === 'negative' ? 45 : 60}%` as any }]} />
-        </View>
       </Card>
     </Animated.View>
   );
@@ -287,11 +283,4 @@ const styles = StyleSheet.create({
   rightMeta: { flexDirection: 'row', alignItems: 'center' },
   headline: { marginTop: 2 },
   detail: { marginTop: 2 },
-  bottomBar: {
-    height: 2,
-    borderRadius: 1,
-    marginTop: Spacing.sm,
-    overflow: 'hidden',
-  },
-  bottomBarFill: { height: '100%', borderRadius: 1 },
 });

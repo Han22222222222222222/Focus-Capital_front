@@ -210,12 +210,13 @@ function reducer(state: FocusState, action: Action): FocusState {
         ? Math.max(5, Math.round(state.sessionElapsed / 60) - distractPenalty)
         : -Math.max(3, Math.round(state.sessionElapsed / 60 * 0.3));
       const newIndex = Math.max(0, Math.min(999, state.focusIndex + deltaIndex));
+      const totalDelta = state.dailyChange + deltaIndex;
       return {
         ...state,
         sessionState: action.payload,
         focusIndex: newIndex,
-        dailyChange: state.dailyChange + deltaIndex,
-        dailyChangePercent: Math.round((state.dailyChange + deltaIndex) / Math.max(1, newIndex - (state.dailyChange + deltaIndex)) * 1000) / 10,
+        dailyChange: totalDelta,
+        dailyChangePercent: calcChangePercent(totalDelta, newIndex),
       };
     }
     case 'RESET_SESSION':

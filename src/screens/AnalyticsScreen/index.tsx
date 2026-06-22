@@ -13,7 +13,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing, Radius } from '../../theme';
 import { FText } from '../../components/common/FText';
 import { Card } from '../../components/common/Card';
-import { Divider } from '../../components/common/Divider';
 import { MiniBar } from '../../components/charts/MiniBar';
 import { HeatMap } from '../../components/charts/HeatMap';
 import { SparkLine } from '../../components/charts/SparkLine';
@@ -141,8 +140,9 @@ export function AnalyticsScreen() {
     sessions.forEach(s => { arr[new Date(s.created_at).getHours()] += s.duration_seconds; });
     return arr;
   }, [sessions]);
-  const bestHour = hourActivity.indexOf(Math.max(...hourActivity));
-  const hasBestHour = sessions.length > 0;
+  const maxHourActivity = Math.max(...hourActivity);
+  const bestHour = maxHourActivity > 0 ? hourActivity.indexOf(maxHourActivity) : -1;
+  const hasBestHour = sessions.length > 0 && maxHourActivity > 0;
 
   // 주간 통계
   const maxDay = dailyMinutes.indexOf(Math.max(...dailyMinutes));

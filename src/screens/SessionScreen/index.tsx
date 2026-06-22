@@ -22,10 +22,9 @@ import {
   watchEvents,
 } from 'react-native-watch-connectivity';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Spacing, Radius, Typography } from '../../theme';
+import { Colors, Spacing, Radius } from '../../theme';
 import { FText } from '../../components/common/FText';
 import { Card } from '../../components/common/Card';
-import { Divider } from '../../components/common/Divider';
 import { useFocus, NewsItem } from '../../store/focusStore';
 
 const { width: W } = Dimensions.get('window');
@@ -303,7 +302,7 @@ function RingTimer({
 // ─── Session Setup ─────────────────────────────────────────────────────────────
 function SessionSetup({ navigation }: any) {
   const { state, dispatch } = useFocus();
-  const [showConsent, setShowConsent] = useState(!state.hasAcceptedTracking);
+  const [showConsent, setShowConsent] = useState(false);
   const [isCustom, setIsCustom] = useState(false);
   const [customMinutes, setCustomMinutes] = useState('');
 
@@ -587,6 +586,14 @@ function ActiveSession() {
     return () => unsub();
   }, []);
 
+  // Dismiss warning when session becomes active again
+  useEffect(() => {
+    if (state.sessionState === 'active' && showWarning) {
+      Animated.timing(warningAnim, { toValue: 0, duration: 200, useNativeDriver: true })
+        .start(() => setShowWarning(false));
+    }
+  }, [state.sessionState]);
+
   // AppState — detect when user leaves app during session
   useEffect(() => {
     const handleChange = (nextState: AppStateStatus) => {
@@ -594,14 +601,10 @@ function ActiveSession() {
         dispatch({ type: 'PAUSE_SESSION' });
         dispatch({ type: 'ADD_DISTRACTION' });
       } else if (nextState === 'active' && sessionStateRef.current === 'paused') {
-        // Returning after distraction — flash warning
-        setShowWarning(true);
+        // Returning after distraction — show persistent banner until user resumes
         warningAnim.setValue(0);
-        Animated.sequence([
-          Animated.timing(warningAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-          Animated.delay(2800),
-          Animated.timing(warningAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-        ]).start(() => setShowWarning(false));
+        Animated.timing(warningAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+        setShowWarning(true);
       }
     };
     const sub = AppState.addEventListener('change', handleChange);
@@ -613,13 +616,19 @@ function ActiveSession() {
 
   return (
     <View style={styles.activeRoot}>
-      {/* ── Distraction return warning ── */}
+      {/* ── Distraction return warning — persistent until resumed ── */}
       {showWarning && (
         <Animated.View style={[styles.warningBanner, { opacity: warningAnim }]}>
           <View style={styles.warningDot} />
-          <FText variant="numXs" color={Colors.market.bearish}>
+          <FText variant="numXs" color={Colors.market.bearish} style={{ flex: 1 }}>
             앱 이탈 감지 — 총 {state.sessionDistractions}회 · -{state.sessionDistractions * 3} FC 페널티
           </FText>
+          <TouchableOpacity
+            onPress={() => dispatch({ type: 'RESUME_SESSION' })}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <FText variant="numXs" color={Colors.accent.primary}>재개 →</FText>
+          </TouchableOpacity>
         </Animated.View>
       )}
 

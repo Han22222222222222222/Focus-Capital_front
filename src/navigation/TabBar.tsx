@@ -75,6 +75,8 @@ function TabItem({
       onPress={onPress}
       activeOpacity={0.7}
       style={styles.tabItem}
+      accessibilityLabel={LABELS[name]}
+      accessibilityRole="button"
     >
       <Animated.View
         style={[
