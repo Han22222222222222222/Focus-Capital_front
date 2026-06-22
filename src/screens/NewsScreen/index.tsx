@@ -94,7 +94,7 @@ function NewsRow({ item, index }: { item: NewsItem; index: number }) {
 
         {/* Bottom indicator */}
         <View style={[styles.bottomBar, { backgroundColor: typeColor + '40' }]}>
-          <View style={[styles.bottomBarFill, { backgroundColor: typeColor, width: `${item.type === 'positive' ? 70 : item.type === 'negative' ? 85 : 50}%` as any }]} />
+          <View style={[styles.bottomBarFill, { backgroundColor: typeColor, width: `${item.type === 'positive' ? 82 : item.type === 'negative' ? 45 : 60}%` as any }]} />
         </View>
       </Card>
     </Animated.View>

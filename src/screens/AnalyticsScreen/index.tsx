@@ -301,9 +301,11 @@ export function AnalyticsScreen() {
                     {
                       label: '평균 이탈 횟수',
                       value: `${avgDistractions}회`,
-                      color: Number(avgDistractions) <= 1
-                        ? Colors.market.bullish
-                        : Colors.market.bearish,
+                      color: avgDistractions === '—'
+                        ? Colors.text.tertiary
+                        : Number(avgDistractions) <= 1
+                          ? Colors.market.bullish
+                          : Colors.market.bearish,
                     },
                     {
                       label: '평균 세션 시간',

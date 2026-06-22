@@ -89,6 +89,7 @@ const CIRCLE_SIZE = 220;
 
 // ─── Tracking consent modal ───────────────────────────────────────────────────
 function TrackingConsentModal({ onAccept }: { onAccept: () => void }) {
+  const { bottom: safeBottom } = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
 
@@ -114,7 +115,7 @@ function TrackingConsentModal({ onAccept }: { onAccept: () => void }) {
       ]}
     >
       <Animated.View
-        style={[styles.consentSheet, { transform: [{ translateY: slideAnim }] }]}
+        style={[styles.consentSheet, { transform: [{ translateY: slideAnim }], paddingBottom: Spacing['3xl'] + safeBottom }]}
       >
         <View style={styles.consentHandle} />
 
@@ -164,6 +165,26 @@ const DURATION_OPTIONS = [
 ];
 
 const FOCUS_OPTIONS = [20, 30, 40, 60, 80];
+
+// ─── FC / Risk calculator ─────────────────────────────────────────────────────
+function calcBaseFC(seconds: number): { fc: number; risk: string } {
+  const minutes = seconds / 60;
+  if (minutes < 20) return { fc: Math.max(1, Math.round(minutes * 0.8)), risk: '낮음' };
+  if (minutes < 35) return { fc: Math.round(minutes * 0.88), risk: '보통' };
+  if (minutes < 70) return { fc: Math.round(minutes * 1.0), risk: '높음' };
+  return { fc: Math.round(minutes * 1.11), risk: '매우 높음' };
+}
+
+function calcFC(durationSeconds: number, distractions: number): { base: number; penalty: number; bonus: number; final: number } {
+  const preset = DURATION_OPTIONS.find(d => d.seconds === durationSeconds);
+  const base = preset
+    ? parseInt(preset.ret.replace(/[^0-9]/g, ''), 10)
+    : calcBaseFC(durationSeconds).fc;
+  const penalty = distractions * 3;
+  const bonus = distractions === 0 ? 5 : 0;
+  const final = Math.max(1, base - penalty + bonus);
+  return { base, penalty, bonus, final };
+}
 
 // ─── Ring Timer ────────────────────────────────────────────────────────────────
 function RingTimer({
@@ -488,26 +509,6 @@ function SessionSetup({ navigation }: any) {
   );
 }
 
-// ─── FC / Risk calculator ─────────────────────────────────────────────────────
-function calcBaseFC(seconds: number): { fc: number; risk: string } {
-  const minutes = seconds / 60;
-  if (minutes < 20) return { fc: Math.max(1, Math.round(minutes * 0.8)), risk: '낮음' };
-  if (minutes < 35) return { fc: Math.round(minutes * 0.88), risk: '보통' };
-  if (minutes < 70) return { fc: Math.round(minutes * 1.0), risk: '높음' };
-  return { fc: Math.round(minutes * 1.11), risk: '매우 높음' };
-}
-
-function calcFC(durationSeconds: number, distractions: number): { base: number; penalty: number; bonus: number; final: number } {
-  const preset = DURATION_OPTIONS.find(d => d.seconds === durationSeconds);
-  const base = preset
-    ? parseInt(preset.ret.replace(/[^0-9]/g, ''), 10)
-    : calcBaseFC(durationSeconds).fc;
-  const penalty = distractions * 3;
-  const bonus = distractions === 0 ? 5 : 0;
-  const final = Math.max(1, base - penalty + bonus);
-  return { base, penalty, bonus, final };
-}
-
 // ─── Active Session ────────────────────────────────────────────────────────────
 function ActiveSession() {
   const { state, dispatch } = useFocus();
@@ -662,7 +663,7 @@ function ActiveSession() {
 
       {state.sessionState === 'success' && (
         <View style={styles.resultBlock}>
-          <Card variant="market-bull" padding={Spacing.lg} style={{ width: W - 64 }}>
+          <Card variant="market-bull" padding={Spacing.lg} style={{ width: W - Spacing.base * 2 - Spacing.lg * 2 }}>
             <FText variant="h3" color={Colors.market.bullish}>세션 완료</FText>
             <FText variant="bodySmall" color={Colors.text.secondary} style={{ marginTop: 4 }}>
               Focus 자산 정산
@@ -702,7 +703,7 @@ function ActiveSession() {
 
       {state.sessionState === 'failure' && (
         <View style={styles.resultBlock}>
-          <Card variant="market-bear" padding={Spacing.lg} style={{ width: W - 64 }}>
+          <Card variant="market-bear" padding={Spacing.lg} style={{ width: W - Spacing.base * 2 - Spacing.lg * 2 }}>
             <FText variant="h3" color={Colors.market.bearish}>세션 중단</FText>
             <FText variant="bodySmall" color={Colors.text.secondary} style={{ marginTop: 4 }}>
               Focus 손실 처리

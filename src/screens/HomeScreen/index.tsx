@@ -336,13 +336,18 @@ export function HomeScreen({ navigation }: any) {
       Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
       Animated.spring(indexAnim, { toValue: 1, friction: 6, tension: 30, useNativeDriver: true }),
     ]).start();
+  }, []);
 
-    // Live chart tick
+  // Live chart tick — independent interval, no tour dependency
+  useEffect(() => {
     const interval = setInterval(() => dispatch({ type: 'TICK_CHART' }), 2000);
+    return () => clearInterval(interval);
+  }, []);
 
-    // Start tour for first-time users
-    if (!state.hasSeenTour) {
-      const timer = setTimeout(() => {
+  // Tour start — only when hasSeenTour flips to false
+  useEffect(() => {
+    if (state.hasSeenTour) return;
+    const timer = setTimeout(() => {
         const rects: Partial<typeof tourRects> = {};
         let count = 0;
         const tryStart = () => {
@@ -363,11 +368,8 @@ export function HomeScreen({ navigation }: any) {
         measure(metricsRef, 'metrics');
         measure(newsRef, 'news');
       }, 700);
-      return () => { clearInterval(interval); clearTimeout(timer); };
-    }
-
-    return () => clearInterval(interval);
-  }, []);
+    return () => clearTimeout(timer);
+  }, [state.hasSeenTour]);
 
   // Step 3 = news section: scroll into view then re-measure
   useEffect(() => {
@@ -566,7 +568,10 @@ export function HomeScreen({ navigation }: any) {
         <View ref={newsRef} collapsable={false}>
         <View style={styles.newsHeader}>
           <FText variant="label" color={Colors.text.tertiary}>최근 뉴스</FText>
-          <TouchableOpacity onPress={() => navigation.navigate('News')}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('News')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <FText variant="label" color={Colors.accent.dim}>전체 보기</FText>
           </TouchableOpacity>
         </View>

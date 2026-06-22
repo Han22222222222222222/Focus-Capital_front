@@ -171,20 +171,44 @@ function reducer(state: FocusState, action: Action): FocusState {
     case 'SET_SESSION_FOCUS':
       return { ...state, sessionFocusInvested: action.payload };
     case 'START_SESSION':
-      return { ...state, sessionState: 'active', sessionElapsed: 0 };
+      return { ...state, sessionState: 'active', sessionElapsed: 0, sessionDistractions: 0 };
     case 'PAUSE_SESSION':
       return { ...state, sessionState: 'paused' };
     case 'RESUME_SESSION':
       return { ...state, sessionState: 'active' };
-    case 'TICK_SESSION':
+    case 'TICK_SESSION': {
       if (state.sessionState !== 'active') return state;
       const newElapsed = state.sessionElapsed + 1;
       if (newElapsed >= state.sessionDuration) {
-        return { ...state, sessionElapsed: newElapsed, sessionState: 'success' };
+        const distractPenalty = state.sessionDistractions * 2;
+        const deltaIndex = Math.max(5, Math.round(newElapsed / 60) - distractPenalty);
+        const newIndex = Math.max(0, Math.min(999, state.focusIndex + deltaIndex));
+        return {
+          ...state,
+          sessionElapsed: newElapsed,
+          sessionState: 'success',
+          focusIndex: newIndex,
+          dailyChange: state.dailyChange + deltaIndex,
+          dailyChangePercent: Math.round((state.dailyChange + deltaIndex) / Math.max(1, newIndex - (state.dailyChange + deltaIndex)) * 1000) / 10,
+        };
       }
       return { ...state, sessionElapsed: newElapsed };
-    case 'END_SESSION':
-      return { ...state, sessionState: action.payload };
+    }
+    case 'END_SESSION': {
+      const isSuccess = action.payload === 'success';
+      const distractPenalty = state.sessionDistractions * 2;
+      const deltaIndex = isSuccess
+        ? Math.max(5, Math.round(state.sessionElapsed / 60) - distractPenalty)
+        : -Math.max(3, Math.round(state.sessionElapsed / 60 * 0.3));
+      const newIndex = Math.max(0, Math.min(999, state.focusIndex + deltaIndex));
+      return {
+        ...state,
+        sessionState: action.payload,
+        focusIndex: newIndex,
+        dailyChange: state.dailyChange + deltaIndex,
+        dailyChangePercent: Math.round((state.dailyChange + deltaIndex) / Math.max(1, newIndex - (state.dailyChange + deltaIndex)) * 1000) / 10,
+      };
+    }
     case 'RESET_SESSION':
       return { ...state, sessionState: 'idle', sessionElapsed: 0, sessionDistractions: 0 };
     case 'ADD_DISTRACTION':
