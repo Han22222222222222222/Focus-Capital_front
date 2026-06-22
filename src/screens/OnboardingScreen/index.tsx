@@ -309,20 +309,32 @@ export function OnboardingScreen() {
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 20 }]}>
         <Dots total={SLIDES.length} current={page} />
 
-        <TouchableOpacity
-          style={[styles.nextBtn, { backgroundColor: slide.accentColor }]}
-          onPress={handleNext}
-          activeOpacity={0.85}
-        >
-          <FText variant="bodyMedium" color={Colors.bg.primary}>
-            {isLast ? '시작하기' : '다음'}
-          </FText>
-          {!isLast && (
-            <FText variant="bodyMedium" color={Colors.bg.primary} style={{ opacity: 0.6, marginLeft: 4 }}>
-              →
-            </FText>
+        <View style={styles.btnRow}>
+          {page > 0 && (
+            <TouchableOpacity
+              style={styles.prevBtn}
+              onPress={() => goTo(page - 1)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <FText variant="bodyMedium" color={Colors.text.tertiary}>← 이전</FText>
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.nextBtn, { backgroundColor: slide.accentColor, flex: 1 }]}
+            onPress={handleNext}
+            activeOpacity={0.85}
+          >
+            <FText variant="bodyMedium" color={Colors.bg.primary}>
+              {isLast ? '시작하기' : '다음'}
+            </FText>
+            {!isLast && (
+              <FText variant="bodyMedium" color={Colors.bg.primary} style={{ opacity: 0.6, marginLeft: 4 }}>
+                →
+              </FText>
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* Step counter */}
         <FText variant="numXs" color={Colors.text.tertiary} style={styles.stepCounter}>
@@ -410,8 +422,22 @@ const styles = StyleSheet.create({
     width: 6,
     backgroundColor: Colors.text.muted,
   },
-  nextBtn: {
+  btnRow: {
+    flexDirection: 'row',
     width: W - Spacing.base * 2,
+    gap: Spacing.sm,
+    alignItems: 'center',
+  },
+  prevBtn: {
+    paddingVertical: Spacing.base,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextBtn: {
     paddingVertical: Spacing.base,
     borderRadius: Radius.lg,
     flexDirection: 'row',

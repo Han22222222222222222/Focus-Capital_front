@@ -532,7 +532,7 @@ export function HomeScreen({ navigation }: any) {
             value={state.focusIndex > 99 ? 84 : state.focusIndex % 100}
             color={Colors.accent.primary}
             glow={Colors.accent.glow}
-            delta={`+${state.dailyChangePercent}%`}
+            delta={`${state.dailyChangePercent >= 0 ? '+' : ''}${state.dailyChangePercent}%`}
             sublabel="집중력 자산"
           />
           <MetricCard

@@ -19,6 +19,7 @@ import { HeatMap } from '../../components/charts/HeatMap';
 import { SparkLine } from '../../components/charts/SparkLine';
 import { useFocus } from '../../store/focusStore';
 import { fetchWeeklyAnalytics, SessionHistory } from '../../services/sessionService';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width: W } = Dimensions.get('window');
 const CHART_W = W - Spacing.base * 2 - Spacing.lg * 2;
@@ -89,9 +90,10 @@ export function AnalyticsScreen() {
   }, []);
 
   useEffect(() => {
-    load();
     Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
   }, []);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   // 최근 7일 요일 라벨 (오래된 순)
   const weekLabels = useMemo(() =>

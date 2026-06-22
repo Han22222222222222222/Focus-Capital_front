@@ -3,6 +3,7 @@ import {
   View,
   StyleSheet,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   Animated,
   StatusBar,
@@ -164,7 +165,12 @@ export function NewsScreen() {
       <TickerBar />
 
       {/* Filters */}
-      <View style={styles.filterRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={styles.filterRow}
+      >
         {FILTERS.map((f) => {
           const active = f === activeFilter;
           const color = active
@@ -187,7 +193,7 @@ export function NewsScreen() {
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
 
       <Divider />
 
@@ -248,6 +254,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border.default,
   },
   tickerContent: { flex: 1, overflow: 'hidden', paddingHorizontal: Spacing.sm },
+  filterScroll: {},
   filterRow: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.base,

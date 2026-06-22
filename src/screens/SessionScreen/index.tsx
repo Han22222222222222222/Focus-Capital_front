@@ -12,6 +12,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { saveSession } from '../../services/sessionService';
 import {
@@ -536,6 +537,10 @@ function ActiveSession() {
       distractions: state.sessionDistractions,
       fc_earned: fcEarned,
       focus_invested: state.sessionFocusInvested,
+    }).then(res => {
+      if (!res.success) {
+        Alert.alert('저장 실패', `세션 기록을 저장하지 못했어요.\n${res.error ?? ''}`, [{ text: '확인' }]);
+      }
     });
 
     dispatch({
@@ -730,7 +735,7 @@ function ActiveSession() {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export function SessionScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { state } = useFocus();
+  const { state, dispatch } = useFocus();
   const isSetup = state.sessionState === 'idle';
 
   return (
@@ -749,7 +754,30 @@ export function SessionScreen({ navigation }: any) {
       <View style={[styles.inner, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 80 }]}>
         {/* Minimal nav header */}
         <View style={styles.navHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity
+            onPress={() => {
+              if (state.sessionState === 'active' || state.sessionState === 'paused') {
+                Alert.alert(
+                  '세션 진행 중',
+                  '지금 나가면 세션이 중단되고 손실 처리돼요. 나갈까요?',
+                  [
+                    { text: '계속 투자', style: 'cancel' },
+                    {
+                      text: '나가기',
+                      style: 'destructive',
+                      onPress: () => {
+                        dispatch({ type: 'END_SESSION', payload: 'failure' });
+                        navigation.goBack();
+                      },
+                    },
+                  ],
+                );
+              } else {
+                navigation.goBack();
+              }
+            }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
             <FText variant="bodyMedium" color={Colors.text.secondary}>← 뒤로</FText>
           </TouchableOpacity>
           <FText variant="label" color={Colors.text.tertiary}>집중 투자</FText>

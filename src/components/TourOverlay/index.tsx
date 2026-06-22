@@ -36,7 +36,7 @@ interface Props {
 }
 
 export function TourOverlay({ steps, currentStep, onNext, onSkip }: Props) {
-  const { top: safeTop } = useSafeAreaInsets();
+  const { top: safeTop, bottom: safeBottom } = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const visible = currentStep >= 0 && currentStep < steps.length;
@@ -55,7 +55,7 @@ export function TourOverlay({ steps, currentStep, onNext, onSkip }: Props) {
 
   const { rect, title, body, spotRadius = 12 } = steps[currentStep];
 
-  const TAB_BAR_H = 80; // approximate tab bar + safe area
+  const TAB_BAR_H = 56 + safeBottom; // tab bar pill height + device safe area
   const SAFE_BOTTOM = SH - TAB_BAR_H;
 
   const sx = Math.max(0, rect.x - PAD);

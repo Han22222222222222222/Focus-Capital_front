@@ -113,9 +113,7 @@ const initialNews: NewsItem[] = [
   },
 ];
 
-const initialWeekly = Array.from({ length: 7 }, () =>
-  Array.from({ length: 24 }, () => Math.floor(Math.random() * 100))
-);
+const initialWeekly = Array.from({ length: 7 }, () => Array(24).fill(0));
 
 const initialState: FocusState = {
   hasSeenOnboarding: false,
