@@ -200,17 +200,15 @@ function RecentSessions() {
 
 // ─── Account Balance Card ─────────────────────────────────────────────────────
 function AccountCard() {
-  const [total, setTotal] = useState<number | null>(null);
+  const [total, setTotal] = useState(0);
   const [todayDelta, setTodayDelta] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     const result = await fetchTotalFC();
-    if (!result.error) {
-      setTotal(result.total);
-      setTodayDelta(result.todayDelta);
-    }
+    setTotal(result.total);
+    setTodayDelta(result.todayDelta);
     setLoading(false);
   }, []);
 
@@ -229,7 +227,7 @@ function AccountCard() {
           ) : (
             <View style={styles.accountBalanceRow}>
               <FText variant="numLg" color={Colors.text.primary}>
-                {total !== null ? total.toLocaleString() : '—'}
+                {total.toLocaleString()}
               </FText>
               <FText variant="numSm" color={Colors.text.tertiary} style={{ marginLeft: 4, marginBottom: 2 }}>
                 FC
@@ -237,7 +235,7 @@ function AccountCard() {
             </View>
           )}
         </View>
-        {!loading && total !== null && (
+        {!loading && (
           <View style={[styles.accountDeltaBadge, { borderColor: deltaColor + '40', backgroundColor: deltaColor + '12' }]}>
             <FText variant="numXs" color={deltaColor}>
               오늘  {deltaSign}{todayDelta} FC
@@ -245,10 +243,10 @@ function AccountCard() {
           </View>
         )}
       </View>
-      {!loading && total !== null && (
+      {!loading && (
         <View style={styles.accountDivider} />
       )}
-      {!loading && total !== null && (
+      {!loading && (
         <FText variant="numXs" color={Colors.text.muted}>
           누적 집중 자산 · 전체 기간
         </FText>
