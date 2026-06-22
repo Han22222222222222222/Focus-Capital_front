@@ -13,14 +13,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Reanimated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withSequence,
-  withTiming,
-  cancelAnimation,
-} from 'react-native-reanimated';
 import { saveSession } from '../../services/sessionService';
 import {
   sendMessage,
@@ -184,43 +176,34 @@ function RingTimer({
 }) {
   const progress = total > 0 ? elapsed / total : 0;
 
-  // Reanimated shared values — run on UI thread, immune to JS timer ticks
-  const scale = useSharedValue(1);
-  const glowOpacity = useSharedValue(0.1);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const pulseRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     if (state === 'active') {
-      scale.value = withRepeat(
-        withSequence(
-          withTiming(1.02, { duration: 1500 }),
-          withTiming(0.98, { duration: 1500 }),
-        ),
-        -1,
-        false,
+      pulseRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(scaleAnim, { toValue: 1.02, duration: 1500, useNativeDriver: true }),
+            Animated.timing(glowAnim, { toValue: 0.3, duration: 1500, useNativeDriver: true }),
+          ]),
+          Animated.parallel([
+            Animated.timing(scaleAnim, { toValue: 0.98, duration: 1500, useNativeDriver: true }),
+            Animated.timing(glowAnim, { toValue: 0.08, duration: 1500, useNativeDriver: true }),
+          ]),
+        ]),
       );
-      glowOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.3, { duration: 2000 }),
-          withTiming(0.1, { duration: 2000 }),
-        ),
-        -1,
-        false,
-      );
+      pulseRef.current.start();
     } else {
-      cancelAnimation(scale);
-      cancelAnimation(glowOpacity);
-      scale.value = withTiming(1, { duration: 200 });
-      glowOpacity.value = withTiming(0, { duration: 200 });
+      pulseRef.current?.stop();
+      Animated.parallel([
+        Animated.timing(scaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start();
     }
+    return () => { pulseRef.current?.stop(); };
   }, [state]);
-
-  const outerAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const glowAnimStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
 
   const remaining = total - elapsed;
   const mins = Math.floor(remaining / 60).toString().padStart(2, '0');
@@ -234,8 +217,8 @@ function RingTimer({
   const r = CIRCLE_SIZE / 2;
 
   return (
-    <Reanimated.View style={[styles.ringOuter, outerAnimStyle]}>
-      <Reanimated.View
+    <Animated.View style={[styles.ringOuter, { transform: [{ scale: scaleAnim }] }]}>
+      <Animated.View
         style={[
           styles.ringGlow,
           {
@@ -243,8 +226,8 @@ function RingTimer({
             height: CIRCLE_SIZE + 40,
             borderRadius: (CIRCLE_SIZE + 40) / 2,
             backgroundColor: ringColor,
+            opacity: glowAnim,
           },
-          glowAnimStyle,
         ]}
       />
       <View
@@ -291,7 +274,7 @@ function RingTimer({
           </View>
         )}
       </View>
-    </Reanimated.View>
+    </Animated.View>
   );
 }
 
@@ -704,10 +687,10 @@ function ActiveSession() {
             </View>
           </Card>
           <TouchableOpacity
-            style={[styles.startButton, { marginTop: Spacing.lg }]}
+            style={styles.homeBtn}
             onPress={() => dispatch({ type: 'RESET_SESSION' })}
           >
-            <FText variant="bodyMedium" color={Colors.bg.primary}>홈으로</FText>
+            <FText variant="label" color={Colors.text.tertiary}>홈으로  →</FText>
           </TouchableOpacity>
         </View>
       )}
@@ -835,6 +818,15 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.base,
     alignItems: 'center',
     marginTop: Spacing.base,
+  },
+  homeBtn: {
+    marginTop: Spacing.lg,
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
   },
   // Active
   activeRoot: {
