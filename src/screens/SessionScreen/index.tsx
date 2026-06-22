@@ -13,6 +13,14 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import Reanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  cancelAnimation,
+} from 'react-native-reanimated';
 import { saveSession } from '../../services/sessionService';
 import {
   sendMessage,
@@ -175,45 +183,59 @@ function RingTimer({
   state: string;
 }) {
   const progress = total > 0 ? elapsed / total : 0;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  // Reanimated shared values — run on UI thread, immune to JS timer ticks
+  const scale = useSharedValue(1);
+  const glowOpacity = useSharedValue(0.1);
 
   useEffect(() => {
     if (state === 'active') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.02, duration: 1500, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 0.98, duration: 1500, useNativeDriver: true }),
-        ])
-      ).start();
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(glowAnim, { toValue: 1, duration: 2000, useNativeDriver: false }),
-          Animated.timing(glowAnim, { toValue: 0.4, duration: 2000, useNativeDriver: false }),
-        ])
-      ).start();
+      scale.value = withRepeat(
+        withSequence(
+          withTiming(1.02, { duration: 1500 }),
+          withTiming(0.98, { duration: 1500 }),
+        ),
+        -1,
+        false,
+      );
+      glowOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.3, { duration: 2000 }),
+          withTiming(0.1, { duration: 2000 }),
+        ),
+        -1,
+        false,
+      );
     } else {
-      pulseAnim.setValue(1);
+      cancelAnimation(scale);
+      cancelAnimation(glowOpacity);
+      scale.value = withTiming(1, { duration: 200 });
+      glowOpacity.value = withTiming(0, { duration: 200 });
     }
   }, [state]);
+
+  const outerAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const glowAnimStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+  }));
 
   const remaining = total - elapsed;
   const mins = Math.floor(remaining / 60).toString().padStart(2, '0');
   const secs = (remaining % 60).toString().padStart(2, '0');
-
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.1, 0.3] });
 
   const ringColor =
     state === 'success' ? Colors.market.bullish
       : state === 'failure' ? Colors.market.bearish
       : Colors.accent.primary;
 
-  // Build SVG-free circle using border trick
   const r = CIRCLE_SIZE / 2;
 
   return (
-    <Animated.View style={[styles.ringOuter, { transform: [{ scale: pulseAnim }] }]}>
-      <Animated.View
+    <Reanimated.View style={[styles.ringOuter, outerAnimStyle]}>
+      <Reanimated.View
         style={[
           styles.ringGlow,
           {
@@ -221,8 +243,8 @@ function RingTimer({
             height: CIRCLE_SIZE + 40,
             borderRadius: (CIRCLE_SIZE + 40) / 2,
             backgroundColor: ringColor,
-            opacity: glowOpacity,
           },
+          glowAnimStyle,
         ]}
       />
       <View
@@ -269,7 +291,7 @@ function RingTimer({
           </View>
         )}
       </View>
-    </Animated.View>
+    </Reanimated.View>
   );
 }
 
