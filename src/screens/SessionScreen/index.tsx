@@ -312,7 +312,7 @@ function SessionSetup({ navigation }: any) {
 
   const customSeconds = parseInt(customMinutes, 10) * 60;
   const customInfo = calcBaseFC(customSeconds);
-  const isCustomValid = !isNaN(customSeconds) && customSeconds >= 60;
+  const isCustomValid = !isNaN(customSeconds) && customSeconds >= 60 && customSeconds <= 120 * 60;
 
   const summaryLabel = isCustom && isCustomValid
     ? `${customMinutes}분`
@@ -404,7 +404,7 @@ function SessionSetup({ navigation }: any) {
                     }
                   }}
                   keyboardType="number-pad"
-                  placeholder="분"
+                  placeholder="1–120"
                   placeholderTextColor={Colors.text.muted}
                   autoFocus
                   maxLength={3}
@@ -752,7 +752,7 @@ export function SessionScreen({ navigation }: any) {
       ]}
     >
       <StatusBar barStyle="light-content" />
-      <View style={[styles.inner, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 80 }]}>
+      <View style={[styles.inner, { paddingTop: insets.top + 8, paddingBottom: isSetup ? 0 : insets.bottom + 80 }]}>
         {/* Minimal nav header */}
         <View style={styles.navHeader}>
           <TouchableOpacity

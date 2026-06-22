@@ -137,7 +137,7 @@ function TermCard({ item, index }: { item: typeof TERMS[0]; index: number }) {
 
   const detailHeight = expandAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 300],
+    outputRange: [0, 400],
   });
 
   return (

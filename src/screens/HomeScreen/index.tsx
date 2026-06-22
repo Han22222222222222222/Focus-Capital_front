@@ -48,12 +48,13 @@ interface MetricCardProps {
   value: number;
   unit?: string;
   delta?: string;
+  deltaPositive?: boolean;
   color: string;
   glow: string;
   sublabel?: string;
 }
 
-function MetricCard({ label, value, unit = '%', delta, color, glow, sublabel }: MetricCardProps) {
+function MetricCard({ label, value, unit = '%', delta, deltaPositive, color, glow, sublabel }: MetricCardProps) {
   const barAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -79,7 +80,11 @@ function MetricCard({ label, value, unit = '%', delta, color, glow, sublabel }: 
         {delta && (
           <FText
             variant="numXs"
-            color={delta.startsWith('+') ? Colors.market.bullish : Colors.market.bearish}
+            color={
+              deltaPositive !== undefined
+                ? deltaPositive ? Colors.market.bullish : Colors.market.bearish
+                : delta.startsWith('+') ? Colors.market.bullish : Colors.market.bearish
+            }
             style={styles.metricDelta}
           >
             {delta}
@@ -342,33 +347,45 @@ export function HomeScreen({ navigation }: any) {
   useEffect(() => {
     const interval = setInterval(() => dispatch({ type: 'TICK_CHART' }), 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [dispatch]);
 
-  // Tour start — only when hasSeenTour flips to false
+  // Tour start — only when hasSeenTour flips to false, retries if views not laid out
   useEffect(() => {
     if (state.hasSeenTour) return;
-    const timer = setTimeout(() => {
-        const rects: Partial<typeof tourRects> = {};
-        let count = 0;
-        const tryStart = () => {
-          count++;
-          if (count === 4 && rects.hero && rects.cta && rects.metrics && rects.news) {
+    let attempts = 0;
+    let timers: ReturnType<typeof setTimeout>[] = [];
+
+    const tryMeasure = () => {
+      const rects: Partial<typeof tourRects> = {};
+      let count = 0;
+      const onMeasured = () => {
+        count++;
+        if (count === 4) {
+          if (rects.hero && rects.cta && rects.metrics && rects.news) {
             setTourRects(rects as NonNullable<typeof tourRects>);
             setTourStep(0);
+          } else if (attempts < 3) {
+            attempts++;
+            const t = setTimeout(tryMeasure, 400);
+            timers.push(t);
           }
-        };
-        const measure = (ref: React.RefObject<View | null>, key: keyof NonNullable<typeof tourRects>) => {
-          ref.current?.measureInWindow((x, y, w, h) => {
-            rects[key] = { x, y, width: w, height: h };
-            tryStart();
-          });
-        };
-        measure(heroRef, 'hero');
-        measure(ctaRef, 'cta');
-        measure(metricsRef, 'metrics');
-        measure(newsRef, 'news');
-      }, 700);
-    return () => clearTimeout(timer);
+        }
+      };
+      const measure = (ref: React.RefObject<View | null>, key: keyof NonNullable<typeof tourRects>) => {
+        ref.current?.measureInWindow((x, y, w, h) => {
+          if (w > 0 && h > 0) rects[key] = { x, y, width: w, height: h };
+          onMeasured();
+        });
+      };
+      measure(heroRef, 'hero');
+      measure(ctaRef, 'cta');
+      measure(metricsRef, 'metrics');
+      measure(newsRef, 'news');
+    };
+
+    const t = setTimeout(tryMeasure, 700);
+    timers.push(t);
+    return () => timers.forEach(clearTimeout);
   }, [state.hasSeenTour]);
 
   // Step 3 = news section: scroll into view then re-measure
@@ -531,7 +548,7 @@ export function HomeScreen({ navigation }: any) {
         <View ref={metricsRef} collapsable={false} style={styles.metricsGrid}>
           <MetricCard
             label="FOCUS"
-            value={state.focusIndex > 99 ? 84 : state.focusIndex % 100}
+            value={Math.min(100, Math.round(state.focusIndex / 10))}
             color={Colors.accent.primary}
             glow={Colors.accent.glow}
             delta={`${state.dailyChangePercent >= 0 ? '+' : ''}${state.dailyChangePercent}%`}
@@ -542,7 +559,8 @@ export function HomeScreen({ navigation }: any) {
             value={state.dopamineLevel}
             color={Colors.dopamine}
             glow={Colors.dopamineGlow}
-            delta={state.dopamineLevel > 70 ? '+과열' : '정상'}
+            delta={state.dopamineLevel > 70 ? '과열' : '정상'}
+            deltaPositive={state.dopamineLevel <= 70}
             sublabel="도파민 수치"
           />
           <MetricCard

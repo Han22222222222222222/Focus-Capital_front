@@ -58,6 +58,8 @@ function TabItem({
         onPress={onPress}
         activeOpacity={0.8}
         style={styles.sessionTab}
+        accessibilityLabel="집중 투자 세션"
+        accessibilityRole="button"
       >
         <View style={styles.sessionButton}>
           <FText variant="label" color={Colors.bg.primary} style={{ fontSize: 18 }}>

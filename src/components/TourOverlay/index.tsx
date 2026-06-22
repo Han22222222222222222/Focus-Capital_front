@@ -62,7 +62,7 @@ export function TourOverlay({ steps, currentStep, onNext, onSkip }: Props) {
   const sy = Math.max(0, rect.y - PAD);
   const sw = Math.min(SW - sx, rect.width + PAD * 2);
   const rawHeight = rect.height + PAD * 2;
-  const sh = Math.min(rawHeight, SAFE_BOTTOM - sy);
+  const sh = Math.max(0, Math.min(rawHeight, SAFE_BOTTOM - sy));
   const spotBottom = sy + sh;
 
   // Put tooltip above spotlight if it's in the lower half of the screen
@@ -97,7 +97,7 @@ export function TourOverlay({ steps, currentStep, onNext, onSkip }: Props) {
         />
 
         {/* Tooltip card */}
-        <View style={[s.tooltip, { top: tooltipTop }]}>
+        <View style={[s.tooltip, { top: tooltipTop, maxHeight: SH * 0.4 }]}>
           {/* Arrow indicator pointing to spotlight */}
           <View style={[s.stepBadge]}>
             <FText variant="numXs" color={Colors.accent.primary}>

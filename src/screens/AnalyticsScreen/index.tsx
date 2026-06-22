@@ -27,11 +27,11 @@ const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
 // 오늘 기준 6일 전~오늘까지 index 반환 (0 = 6일 전, 6 = 오늘), 범위 밖이면 -1
 function getDayIndex(isoString: string): number {
-  const sessionDate = new Date(isoString);
+  const s = new Date(isoString);
+  const sessionDay = new Date(s.getFullYear(), s.getMonth(), s.getDate());
   const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  const diffMs = today.getTime() - sessionDate.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const diffDays = Math.round((todayDay.getTime() - sessionDay.getTime()) / (1000 * 60 * 60 * 24));
   return diffDays <= 6 ? 6 - diffDays : -1;
 }
 
@@ -346,7 +346,7 @@ export function AnalyticsScreen() {
                       value: totalSessions - successCount,
                       total: totalSessions,
                       color: Colors.market.bearish,
-                      comment: `손실 ${Math.abs(sessions.filter(s => s.result === 'failure').reduce((a, s) => a + s.fc_earned, 0))} FC`,
+                      comment: (() => { const loss = Math.abs(sessions.filter(s => s.result === 'failure').reduce((a, s) => a + s.fc_earned, 0)); return loss > 0 ? `손실 ${loss} FC` : '손실 없음'; })(),
                     },
                     {
                       label: '무이탈 세션',

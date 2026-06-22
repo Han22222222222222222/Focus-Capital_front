@@ -2,7 +2,10 @@
  * Focus Capital — in-memory state store (React context + useReducer).
  * No external state library needed for MVP.
  */
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const STORAGE_KEY = '@focus_capital_flags';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -156,6 +159,12 @@ type Action =
   | { type: 'TICK_CHART' }
   | { type: 'ADD_NEWS'; payload: NewsItem };
 
+function calcChangePercent(totalDelta: number, newIndex: number): number {
+  const base = newIndex - totalDelta;
+  if (base <= 0) return Math.min(999, totalDelta);
+  return Math.round(Math.max(-99, Math.min(999, (totalDelta / base) * 100)) * 10) / 10;
+}
+
 function reducer(state: FocusState, action: Action): FocusState {
   switch (action.type) {
     case 'COMPLETE_ONBOARDING':
@@ -189,7 +198,7 @@ function reducer(state: FocusState, action: Action): FocusState {
           sessionState: 'success',
           focusIndex: newIndex,
           dailyChange: state.dailyChange + deltaIndex,
-          dailyChangePercent: Math.round((state.dailyChange + deltaIndex) / Math.max(1, newIndex - (state.dailyChange + deltaIndex)) * 1000) / 10,
+          dailyChangePercent: calcChangePercent(state.dailyChange + deltaIndex, newIndex),
         };
       }
       return { ...state, sessionElapsed: newElapsed };
@@ -240,6 +249,29 @@ const FocusContext = createContext<{
 
 export function FocusProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  // Restore persisted flags on mount
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then(raw => {
+      if (!raw) return;
+      try {
+        const flags = JSON.parse(raw);
+        if (flags.hasSeenOnboarding) dispatch({ type: 'COMPLETE_ONBOARDING' });
+        if (flags.hasSeenTour) dispatch({ type: 'COMPLETE_TOUR' });
+        if (flags.hasAcceptedTracking) dispatch({ type: 'ACCEPT_TRACKING' });
+      } catch {}
+    });
+  }, []);
+
+  // Persist flags whenever they change
+  useEffect(() => {
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
+      hasSeenOnboarding: state.hasSeenOnboarding,
+      hasSeenTour: state.hasSeenTour,
+      hasAcceptedTracking: state.hasAcceptedTracking,
+    }));
+  }, [state.hasSeenOnboarding, state.hasSeenTour, state.hasAcceptedTracking]);
+
   return (
     <FocusContext.Provider value={{ state, dispatch }}>
       {children}
