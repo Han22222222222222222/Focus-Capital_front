@@ -184,9 +184,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: -16,
     shadowColor: Colors.accent.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

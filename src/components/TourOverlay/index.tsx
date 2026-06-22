@@ -61,9 +61,8 @@ export function TourOverlay({ steps, currentStep, onNext, onSkip }: Props) {
   const sx = Math.max(0, rect.x - PAD);
   const sy = Math.max(0, rect.y - PAD);
   const sw = Math.min(SW - sx, rect.width + PAD * 2);
-  // Clamp spotlight bottom so it doesn't bleed under the tab bar
-  const rawBottom = sy + rect.height + PAD * 2;
-  const sh = Math.min(rawBottom, SAFE_BOTTOM - sy);
+  const rawHeight = rect.height + PAD * 2;
+  const sh = Math.min(rawHeight, SAFE_BOTTOM - sy);
   const spotBottom = sy + sh;
 
   // Put tooltip above spotlight if it's in the lower half of the screen
