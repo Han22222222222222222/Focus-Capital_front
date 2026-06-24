@@ -270,7 +270,7 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
       hasSeenOnboarding: state.hasSeenOnboarding,
       hasSeenTour: state.hasSeenTour,
       hasAcceptedTracking: state.hasAcceptedTracking,
-    }));
+    })).catch(() => {});
   }, [state.hasSeenOnboarding, state.hasSeenTour, state.hasAcceptedTracking]);
 
   return (
