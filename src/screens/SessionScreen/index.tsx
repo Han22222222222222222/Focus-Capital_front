@@ -14,6 +14,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { requestAuthorization, getCurrentFocusStatus } from 'react-native-focus';
 import { saveSession } from '../../services/sessionService';
 import {
   sendMessage,
@@ -299,6 +300,22 @@ function RingTimer({
   );
 }
 
+// ─── iOS Focus mode suggestion ────────────────────────────────────────────────
+async function checkFocusMode() {
+  try {
+    const status = await requestAuthorization();
+    if (status !== 3) return; // Not authorized
+    const isActive = await getCurrentFocusStatus();
+    if (!isActive) {
+      Alert.alert(
+        '집중 모드가 꺼져 있어요',
+        'iOS 집중 모드를 켜면 알림이 차단돼 더 깊이 몰입할 수 있어요.',
+        [{ text: '확인' }],
+      );
+    }
+  } catch (_) {}
+}
+
 // ─── Session Setup ─────────────────────────────────────────────────────────────
 function SessionSetup({ navigation }: any) {
   const { state, dispatch } = useFocus();
@@ -487,6 +504,7 @@ function SessionSetup({ navigation }: any) {
             setShowConsent(true);
           } else {
             dispatch({ type: 'START_SESSION' });
+            checkFocusMode();
           }
         }}
       >
@@ -503,6 +521,7 @@ function SessionSetup({ navigation }: any) {
           dispatch({ type: 'ACCEPT_TRACKING' });
           setShowConsent(false);
           dispatch({ type: 'START_SESSION' });
+          checkFocusMode();
         }}
       />
     )}
@@ -665,7 +684,20 @@ function ActiveSession() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.controlBtn, styles.controlBtnDanger]}
-            onPress={() => dispatch({ type: 'END_SESSION', payload: 'failure' })}
+            onPress={() => {
+              Alert.alert(
+                '세션 중단',
+                '지금 중단하면 손실 처리돼요. 정말 중단할까요?',
+                [
+                  { text: '계속 집중', style: 'cancel' },
+                  {
+                    text: '중단',
+                    style: 'destructive',
+                    onPress: () => dispatch({ type: 'END_SESSION', payload: 'failure' }),
+                  },
+                ]
+              );
+            }}
           >
             <FText variant="bodyMedium" color={Colors.market.bearish}>중단</FText>
           </TouchableOpacity>
