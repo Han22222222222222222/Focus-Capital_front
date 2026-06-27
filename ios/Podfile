@@ -30,5 +30,26 @@ target 'front' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Stub for removed hermes V1 inspector API (hermes/inspector/RuntimeAdapter.h)
+    # Required by react-native-reanimated 3.x with newer hermes-engine
+    stub_dir = "#{installer.sandbox.root}/Headers/Public/hermes-engine/hermes/inspector"
+    FileUtils.mkdir_p(stub_dir)
+    stub_path = "#{stub_dir}/RuntimeAdapter.h"
+    unless File.exist?(stub_path)
+      File.write(stub_path, <<~STUB)
+        // Stub for removed hermes V1 inspector API
+        #pragma once
+        #include <hermes/hermes.h>
+        namespace facebook::hermes::inspector_modern {
+        class RuntimeAdapter {
+         public:
+          virtual ~RuntimeAdapter() = default;
+          virtual facebook::hermes::HermesRuntime& getRuntime() = 0;
+          virtual void tickleJs() = 0;
+        };
+        } // namespace facebook::hermes::inspector_modern
+      STUB
+    end
   end
 end
