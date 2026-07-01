@@ -1,4 +1,5 @@
 import React from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -8,8 +9,11 @@ import { NewsScreen } from '../screens/NewsScreen';
 import { AnalyticsScreen } from '../screens/AnalyticsScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { GlossaryScreen } from '../screens/GlossaryScreen';
+import { LoginScreen } from '../screens/LoginScreen';
 import { TabBar } from './TabBar';
 import { useFocus } from '../store/focusStore';
+import { useAuth } from '../store/authStore';
+import { Colors } from '../theme';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -42,12 +46,23 @@ function MainStack() {
 }
 
 export function AppNavigator() {
+  const { session, loading } = useAuth();
   const { state } = useFocus();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.bg.primary, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={Colors.accent.primary} />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
-        {!state.hasSeenOnboarding ? (
+        {!session ? (
+          <Stack.Screen name="Login" component={LoginScreen} />
+        ) : !state.hasSeenOnboarding ? (
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         ) : (
           <Stack.Screen name="Main" component={MainStack} />

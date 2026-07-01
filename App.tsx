@@ -3,6 +3,7 @@ import { StatusBar, View, Animated, StyleSheet } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FocusProvider, useFocus } from './src/store/focusStore';
+import { AuthProvider } from './src/store/authStore';
 import { AppNavigator } from './src/navigation';
 import { Colors, Spacing } from './src/theme';
 import { FText } from './src/components/common/FText';
@@ -69,9 +70,11 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-        <FocusProvider>
-          <AppRoot />
-        </FocusProvider>
+        <AuthProvider>
+          <FocusProvider>
+            <AppRoot />
+          </FocusProvider>
+        </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -17,6 +17,7 @@ import { Card } from '../../components/common/Card';
 import { Divider } from '../../components/common/Divider';
 import { SparkLine } from '../../components/charts/SparkLine';
 import { useFocus } from '../../store/focusStore';
+import { useAuth } from '../../store/authStore';
 import { fetchRecentSessions, fetchTodaySessions, fetchTotalFC, SessionHistory } from '../../services/sessionService';
 import { inferFocusReadiness } from '../../utils/focusInference';
 import { useFocusEffect } from '@react-navigation/native';
@@ -343,6 +344,7 @@ function ReadinessCard() {
 export function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { state, dispatch } = useFocus();
+  const { signOut } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const indexAnim = useRef(new Animated.Value(0)).current;
 
@@ -463,6 +465,16 @@ export function HomeScreen({ navigation }: any) {
             >
               <View style={styles.helpBtn}>
                 <FText variant="numXs" color={Colors.text.tertiary}>?</FText>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={signOut}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel="로그아웃"
+              accessibilityRole="button"
+            >
+              <View style={styles.helpBtn}>
+                <FText variant="numXs" color={Colors.text.tertiary}>↩</FText>
               </View>
             </TouchableOpacity>
             <StatusBadge status={state.marketStatus} />
